@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@theme {
+  --color-midnight: #101828;
+  --color-indigo-brand: #5B5BD6;
+  --color-indigo-hover: #4B4BC2;
+  --color-lavender-mist: #F0EEFF;
+  --color-fresh-mint: #21B47A;
+  --color-mint-light: #E8F8F1;
+  --color-soft-coral: #F26B5B;
+  --color-coral-light: #FDF0EE;
+  --color-warm-cloud: #F8F8F5;
+  --color-border-subtle: #E8E6DF;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer base {
+  * {
+    border-color: #E8E6DF;
+  }
+  
+  body {
+    background-color: #F8F8F5;
+    color: #101828;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Accessible focus styling */
+  :focus-visible {
+    outline: 2px solid #5B5BD6;
+    outline-offset: 2px;
+  }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D5D3CC;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B8B5AC;
+}
+
+/* ========================================================
+   GLOBAL ARCHITECTURE: LOW-BANDWIDTH (LITE) MODE
+   Disables heavy animations, simplifies gradients, prevents GPU lag
+   ======================================================== */
+[data-low-bandwidth="true"] * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+[data-low-bandwidth="true"] .animate-in,
+[data-low-bandwidth="true"] .fade-in,
+[data-low-bandwidth="true"] .animate-pulse,
+[data-low-bandwidth="true"] .animate-spin {
+  animation: none !important;
+}
+
+/* ========================================================
+   ACCESSIBILITY: HIGH-CONTRAST MODE
+   Enhanced text contrast & unmistakable focus rings
+   ======================================================== */
+[data-high-contrast="true"] {
+  --color-border-subtle: #000000;
+}
+
+[data-high-contrast="true"] * {
+  border-color: #475467 !important;
+}
+
+[data-high-contrast="true"] p,
+[data-high-contrast="true"] span,
+[data-high-contrast="true"] label {
+  color: #000000 !important;
+}
+
+[data-high-contrast="true"] :focus-visible {
+  outline: 3px solid #000000 !important;
+  outline-offset: 3px !important;
+}
+
+/* Mobile-First touch target accessibility */
+@media (max-width: 640px) {
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+}
+
+/* Print styling for clean PDF export */
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  
+  body * {
+    visibility: hidden;
+  }
+
+  #printable-resume-container,
+  #printable-resume-container * {
+    visibility: visible;
+  }
+
+  #printable-resume-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+  }
+
+  @page {
+    size: letter portrait;
+    margin: 10mm;
+  }
+}

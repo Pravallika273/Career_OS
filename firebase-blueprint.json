@@ -1,0 +1,529 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Authenticated user identity record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "role": { "type": "string", "enum": ["student", "mentor", "admin"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "User career profile details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "careerGoal": { "type": "string", "maxLength": 256 },
+        "currentLevel": { "type": "string", "maxLength": 128 },
+        "availableTime": { "type": "string", "maxLength": 64 },
+        "urgency": { "type": "string", "maxLength": 64 },
+        "careerClarity": { "type": "string", "maxLength": 128 },
+        "primaryWorry": { "type": "string", "maxLength": 256 },
+        "preferredLearningStyle": { "type": "string", "maxLength": 128 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "name", "createdAt", "updatedAt"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "User specific career goal and milestones",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "targetRole": { "type": "string", "maxLength": 128 },
+        "targetDate": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["active", "completed", "archived"] },
+        "progressPercentage": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "status", "createdAt", "updatedAt"]
+    },
+    "Skill": {
+      "title": "Skill",
+      "description": "Skill catalog definition and proficiency item",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "proficiencyLevel": { "type": "string", "maxLength": 64 },
+        "verifiedCount": { "type": "number" },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "createdAt", "updatedAt"]
+    },
+    "Interest": {
+      "title": "Interest",
+      "description": "Career interest or domain curiosity track",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "affinityScore": { "type": "number" },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "createdAt", "updatedAt"]
+    },
+    "Career": {
+      "title": "Career",
+      "description": "Career track exploration catalog or target path",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 2048 },
+        "salaryRange": { "type": "string", "maxLength": 128 },
+        "growthOutlook": { "type": "string", "maxLength": 128 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["slug", "title", "isPublic", "createdAt", "updatedAt"]
+    },
+    "CareerExperiment": {
+      "title": "CareerExperiment",
+      "description": "User exploratory experiment or track comparison",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "trackA": { "type": "string", "maxLength": 128 },
+        "trackB": { "type": "string", "maxLength": 128 },
+        "findings": { "type": "string", "maxLength": 2048 },
+        "preferredTrack": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["active", "completed"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "trackA", "trackB", "status", "createdAt", "updatedAt"]
+    },
+    "Roadmap": {
+      "title": "Roadmap",
+      "description": "Personalized adaptive career plan and queue",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "milestoneTitle": { "type": "string", "maxLength": 256 },
+        "urgencyCalibration": { "type": "string", "maxLength": 64 },
+        "activeNextStepId": { "type": "string", "maxLength": 128 },
+        "completedStepsCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "milestoneTitle", "urgencyCalibration", "createdAt", "updatedAt"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Practical simulation task or actionable exercise",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "careerArea": { "type": "string", "maxLength": 128 },
+        "skill": { "type": "string", "maxLength": 128 },
+        "difficulty": { "type": "string", "maxLength": 32 },
+        "estimatedMinutes": { "type": "number" },
+        "objective": { "type": "string", "maxLength": 1024 },
+        "isPublic": { "type": "boolean" },
+        "isSimulation": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "careerArea", "skill", "difficulty", "createdAt", "updatedAt"]
+    },
+    "TaskAttempt": {
+      "title": "TaskAttempt",
+      "description": "User attempt and workspace draft for a task",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "taskId": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["draft", "submitted", "completed"] },
+        "answers": { "type": "string", "maxLength": 8192 },
+        "timeSpentMinutes": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "taskId", "status", "createdAt", "updatedAt"]
+    },
+    "TaskFeedback": {
+      "title": "TaskFeedback",
+      "description": "Evaluation or user feedback for a task execution",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "taskId": { "type": "string", "maxLength": 128 },
+        "feedbackType": { "type": "string", "enum": ["enjoyed", "struggled", "avoid", "completed", "too_easy"] },
+        "scorePercentage": { "type": "number" },
+        "reviewerNotes": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "taskId", "feedbackType", "createdAt", "updatedAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "End-to-end challenge or proof project",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "description": { "type": "string", "maxLength": 2048 },
+        "techStack": { "type": "string", "maxLength": 512 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "createdAt", "updatedAt"]
+    },
+    "ProjectProgress": {
+      "title": "ProjectProgress",
+      "description": "User progress status and milestones for a project",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "completedSteps": { "type": "number" },
+        "totalSteps": { "type": "number" },
+        "status": { "type": "string", "enum": ["not_started", "in_progress", "completed"] },
+        "repoUrl": { "type": "string", "maxLength": 512 },
+        "liveUrl": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "projectId", "status", "createdAt", "updatedAt"]
+    },
+    "CareerEvidence": {
+      "title": "CareerEvidence",
+      "description": "Verifiable proof item stored in evidence vault",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "activity": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "output": { "type": "string", "maxLength": 4096 },
+        "skillsPracticed": { "type": "string", "maxLength": 1024 },
+        "verificationBadge": { "type": "string", "maxLength": 128 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "activity", "category", "output", "createdAt", "updatedAt"]
+    },
+    "Portfolio": {
+      "title": "Portfolio",
+      "description": "Public or private portfolio showcasing evidence",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "slug": { "type": "string", "maxLength": 128 },
+        "headline": { "type": "string", "maxLength": 256 },
+        "bio": { "type": "string", "maxLength": 2048 },
+        "isPublic": { "type": "boolean" },
+        "theme": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "slug", "isPublic", "createdAt", "updatedAt"]
+    },
+    "Resume": {
+      "title": "Resume",
+      "description": "ATS-aligned resume data with verified evidence bullets",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "targetRole": { "type": "string", "maxLength": 128 },
+        "summary": { "type": "string", "maxLength": 2048 },
+        "atsScore": { "type": "number" },
+        "contentJson": { "type": "string", "maxLength": 16384 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "targetRole", "createdAt", "updatedAt"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Application pipeline entry tracked by user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "company": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 128 },
+        "stage": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["Draft", "Applied", "Screening", "Interview", "Offer", "Rejected", "Withdrawn"] },
+        "appliedDate": { "type": "string", "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "company", "role", "status", "createdAt", "updatedAt"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "Curated or verified opportunity listing",
+      "type": "object",
+      "properties": {
+        "company": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 128 },
+        "location": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 64 },
+        "description": { "type": "string", "maxLength": 4096 },
+        "isPublic": { "type": "boolean" },
+        "isVerified": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["company", "role", "isPublic", "createdAt", "updatedAt"]
+    },
+    "Interview": {
+      "title": "Interview",
+      "description": "Simulated interview session and scoring record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "track": { "type": "string", "maxLength": 64 },
+        "roleTarget": { "type": "string", "maxLength": 128 },
+        "overallScore": { "type": "number" },
+        "transcriptSummary": { "type": "string", "maxLength": 8192 },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "track", "isCompleted", "createdAt", "updatedAt"]
+    },
+    "WorkplaceSkill": {
+      "title": "WorkplaceSkill",
+      "description": "Work-Ready workplace scenario resolution and EQ log",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "scenarioId": { "type": "string", "maxLength": 128 },
+        "area": { "type": "string", "maxLength": 64 },
+        "chosenOptionIndex": { "type": "number" },
+        "scoreEarned": { "type": "number" },
+        "reflection": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "scenarioId", "area", "chosenOptionIndex", "createdAt", "updatedAt"]
+    },
+    "Mentor": {
+      "title": "Mentor",
+      "description": "Community mentor or alumni profile",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 128 },
+        "company": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "archetype": { "type": "string", "maxLength": 64 },
+        "bio": { "type": "string", "maxLength": 2048 },
+        "isAcceptingQuestions": { "type": "boolean" },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "role", "category", "isPublic", "createdAt", "updatedAt"]
+    },
+    "MentorRequest": {
+      "title": "MentorRequest",
+      "description": "Guidance or Q&A request from student to mentor",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "maxLength": 128 },
+        "mentorId": { "type": "string", "maxLength": 128 },
+        "mentorUserId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "questionText": { "type": "string", "maxLength": 2048 },
+        "status": { "type": "string", "enum": ["pending", "answered", "declined"] },
+        "answerText": { "type": "string", "maxLength": 4096 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["studentId", "mentorId", "status", "questionText", "createdAt", "updatedAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct message thread between participants",
+      "type": "object",
+      "properties": {
+        "participantIds": { "type": "string", "maxLength": 512 },
+        "title": { "type": "string", "maxLength": 128 },
+        "lastMessageSnippet": { "type": "string", "maxLength": 256 },
+        "lastMessageAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["participantIds", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Individual message within a conversation",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string", "maxLength": 128 },
+        "senderId": { "type": "string", "maxLength": 128 },
+        "senderName": { "type": "string", "maxLength": 128 },
+        "text": { "type": "string", "maxLength": 4096 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["conversationId", "senderId", "text", "createdAt", "updatedAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification alert",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 1024 },
+        "type": { "type": "string", "maxLength": 64 },
+        "linkRoute": { "type": "string", "maxLength": 64 },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "message", "isRead", "createdAt", "updatedAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "User account and application preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "emailNotifications": { "type": "boolean" },
+        "weeklyDigest": { "type": "boolean" },
+        "paceCalibrationPreference": { "type": "string", "maxLength": 64 },
+        "theme": { "type": "string", "maxLength": 32 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User account and identity documents"
+    },
+    "/profiles/{profileId}": {
+      "schema": "Profile",
+      "description": "User career profiles (private to owner, optional public preview without PII)"
+    },
+    "/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "User career goals"
+    },
+    "/skills/{skillId}": {
+      "schema": "Skill",
+      "description": "Skill catalog and user-acquired skills"
+    },
+    "/interests/{interestId}": {
+      "schema": "Interest",
+      "description": "User interests and career curiosity areas"
+    },
+    "/careers/{careerId}": {
+      "schema": "Career",
+      "description": "Career exploration tracks catalog"
+    },
+    "/careerExperiments/{experimentId}": {
+      "schema": "CareerExperiment",
+      "description": "User career experiment comparisons and test drives"
+    },
+    "/roadmaps/{roadmapId}": {
+      "schema": "Roadmap",
+      "description": "User personalized adaptive roadmaps"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Practical tasks catalog and user custom tasks"
+    },
+    "/taskAttempts/{attemptId}": {
+      "schema": "TaskAttempt",
+      "description": "User task executions and workspace answers"
+    },
+    "/taskFeedback/{feedbackId}": {
+      "schema": "TaskFeedback",
+      "description": "User task feedback and adaptation logs"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Projects catalog and user projects"
+    },
+    "/projectProgress/{progressId}": {
+      "schema": "ProjectProgress",
+      "description": "User project execution status"
+    },
+    "/careerEvidence/{evidenceId}": {
+      "schema": "CareerEvidence",
+      "description": "User career evidence vault deliverables"
+    },
+    "/portfolios/{portfolioId}": {
+      "schema": "Portfolio",
+      "description": "User public and private portfolio pages"
+    },
+    "/resumes/{resumeId}": {
+      "schema": "Resume",
+      "description": "User tailored ATS resumes and evidence citations"
+    },
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "User job and internship pipeline applications"
+    },
+    "/opportunities/{opportunityId}": {
+      "schema": "Opportunity",
+      "description": "Verified opportunity listings and challenges"
+    },
+    "/interviews/{interviewId}": {
+      "schema": "Interview",
+      "description": "User interview practice sessions and evaluations"
+    },
+    "/workplaceSkills/{skillResolutionId}": {
+      "schema": "WorkplaceSkill",
+      "description": "Workplace scenario resolutions and professional EQ scores"
+    },
+    "/mentors/{mentorId}": {
+      "schema": "Mentor",
+      "description": "Community mentors and alumni directory"
+    },
+    "/mentorRequests/{requestId}": {
+      "schema": "MentorRequest",
+      "description": "Student questions and guidance requests to mentors"
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Chat threads between authenticated users"
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages inside a conversation"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/settings/{settingsId}": {
+      "schema": "Settings",
+      "description": "User account settings and preferences"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "CareerOS",
+  "description": "Global career-development platform for students, beginners, and early-career builders. Start wherever you are, build proof, become ready.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

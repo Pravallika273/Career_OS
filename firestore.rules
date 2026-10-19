@@ -1,0 +1,646 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------
+    // Global Safety Net: Default-deny all unmapped paths
+    // -------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------
+    // Global Reusable Security Helpers
+    // -------------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == 'gpravallikamsds539013@gmail.com' && request.auth.token.email_verified == true)
+      );
+    }
+
+    // -------------------------------------------------------------
+    // Validators for Entities
+    // -------------------------------------------------------------
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() <= 256 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024)) &&
+        (!('role' in data) || (data.role in ['student', 'mentor', 'admin']));
+    }
+
+    function isValidProfile(data) {
+      return data.keys().hasAll(['userId', 'name', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.name is string && data.name.size() <= 128 &&
+        (!('careerGoal' in data) || (data.careerGoal is string && data.careerGoal.size() <= 256)) &&
+        (!('currentLevel' in data) || (data.currentLevel is string && data.currentLevel.size() <= 128)) &&
+        (!('availableTime' in data) || (data.availableTime is string && data.availableTime.size() <= 64)) &&
+        (!('urgency' in data) || (data.urgency is string && data.urgency.size() <= 64)) &&
+        (!('primaryWorry' in data) || (data.primaryWorry is string && data.primaryWorry.size() <= 256)) &&
+        (!('isPublic' in data) || data.isPublic is bool);
+    }
+
+    function isValidGoal(data) {
+      return data.keys().hasAll(['userId', 'title', 'status', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.title is string && data.title.size() <= 256 &&
+        data.status in ['active', 'completed', 'archived'] &&
+        (!('targetRole' in data) || (data.targetRole is string && data.targetRole.size() <= 128));
+    }
+
+    function isValidSkill(data) {
+      return data.keys().hasAll(['name', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() <= 128 &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 64)) &&
+        (!('proficiencyLevel' in data) || (data.proficiencyLevel is string && data.proficiencyLevel.size() <= 64)) &&
+        (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+        (!('isPublic' in data) || data.isPublic is bool);
+    }
+
+    function isValidInterest(data) {
+      return data.keys().hasAll(['name', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() <= 128 &&
+        (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+        (!('isPublic' in data) || data.isPublic is bool);
+    }
+
+    function isValidCareer(data) {
+      return data.keys().hasAll(['slug', 'title', 'isPublic', 'createdAt', 'updatedAt']) &&
+        data.slug is string && data.slug.size() <= 128 &&
+        data.title is string && data.title.size() <= 128 &&
+        data.isPublic is bool &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 2048));
+    }
+
+    function isValidCareerExperiment(data) {
+      return data.keys().hasAll(['userId', 'trackA', 'trackB', 'status', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.trackA is string && data.trackA.size() <= 128 &&
+        data.trackB is string && data.trackB.size() <= 128 &&
+        data.status in ['active', 'completed'] &&
+        (!('findings' in data) || (data.findings is string && data.findings.size() <= 2048));
+    }
+
+    function isValidRoadmap(data) {
+      return data.keys().hasAll(['userId', 'milestoneTitle', 'urgencyCalibration', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.milestoneTitle is string && data.milestoneTitle.size() <= 256 &&
+        data.urgencyCalibration is string && data.urgencyCalibration.size() <= 64;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['title', 'careerArea', 'skill', 'difficulty', 'createdAt', 'updatedAt']) &&
+        data.title is string && data.title.size() <= 256 &&
+        data.careerArea is string && data.careerArea.size() <= 128 &&
+        data.skill is string && data.skill.size() <= 128 &&
+        data.difficulty is string && data.difficulty.size() <= 32 &&
+        (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+        (!('objective' in data) || (data.objective is string && data.objective.size() <= 1024)) &&
+        (!('isPublic' in data) || data.isPublic is bool);
+    }
+
+    function isValidTaskAttempt(data) {
+      return data.keys().hasAll(['userId', 'taskId', 'status', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.taskId is string && data.taskId.size() <= 128 &&
+        data.status in ['draft', 'submitted', 'completed'] &&
+        (!('answers' in data) || (data.answers is string && data.answers.size() <= 8192));
+    }
+
+    function isValidTaskFeedback(data) {
+      return data.keys().hasAll(['userId', 'taskId', 'feedbackType', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.taskId is string && data.taskId.size() <= 128 &&
+        data.feedbackType in ['enjoyed', 'struggled', 'avoid', 'completed', 'too_easy'] &&
+        (!('reviewerNotes' in data) || (data.reviewerNotes is string && data.reviewerNotes.size() <= 2048));
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['title', 'createdAt', 'updatedAt']) &&
+        data.title is string && data.title.size() <= 256 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 2048)) &&
+        (!('techStack' in data) || (data.techStack is string && data.techStack.size() <= 512)) &&
+        (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+        (!('isPublic' in data) || data.isPublic is bool);
+    }
+
+    function isValidProjectProgress(data) {
+      return data.keys().hasAll(['userId', 'projectId', 'status', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.projectId is string && data.projectId.size() <= 128 &&
+        data.status in ['not_started', 'in_progress', 'completed'] &&
+        (!('repoUrl' in data) || (data.repoUrl is string && data.repoUrl.size() <= 512)) &&
+        (!('liveUrl' in data) || (data.liveUrl is string && data.liveUrl.size() <= 512));
+    }
+
+    function isValidCareerEvidence(data) {
+      return data.keys().hasAll(['userId', 'activity', 'category', 'output', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.activity is string && data.activity.size() <= 256 &&
+        data.category is string && data.category.size() <= 64 &&
+        data.output is string && data.output.size() <= 4096 &&
+        (!('skillsPracticed' in data) || (data.skillsPracticed is string && data.skillsPracticed.size() <= 1024)) &&
+        (!('verificationBadge' in data) || (data.verificationBadge is string && data.verificationBadge.size() <= 128)) &&
+        (!('isPublic' in data) || data.isPublic is bool);
+    }
+
+    function isValidPortfolio(data) {
+      return data.keys().hasAll(['userId', 'slug', 'isPublic', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.slug is string && data.slug.size() <= 128 &&
+        data.isPublic is bool &&
+        (!('headline' in data) || (data.headline is string && data.headline.size() <= 256)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 2048));
+    }
+
+    function isValidResume(data) {
+      return data.keys().hasAll(['userId', 'title', 'targetRole', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.title is string && data.title.size() <= 128 &&
+        data.targetRole is string && data.targetRole.size() <= 128 &&
+        (!('summary' in data) || (data.summary is string && data.summary.size() <= 2048)) &&
+        (!('contentJson' in data) || (data.contentJson is string && data.contentJson.size() <= 16384));
+    }
+
+    function isValidApplication(data) {
+      return data.keys().hasAll(['userId', 'company', 'role', 'status', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.company is string && data.company.size() <= 128 &&
+        data.role is string && data.role.size() <= 128 &&
+        data.status in ['Draft', 'Applied', 'Screening', 'Interview', 'Offer', 'Rejected', 'Withdrawn'] &&
+        (!('stage' in data) || (data.stage is string && data.stage.size() <= 64)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 2048));
+    }
+
+    function isValidOpportunity(data) {
+      return data.keys().hasAll(['company', 'role', 'isPublic', 'createdAt', 'updatedAt']) &&
+        data.company is string && data.company.size() <= 128 &&
+        data.role is string && data.role.size() <= 128 &&
+        data.isPublic is bool &&
+        (!('location' in data) || (data.location is string && data.location.size() <= 128)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 4096));
+    }
+
+    function isValidInterview(data) {
+      return data.keys().hasAll(['userId', 'track', 'isCompleted', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.track is string && data.track.size() <= 64 &&
+        data.isCompleted is bool &&
+        (!('transcriptSummary' in data) || (data.transcriptSummary is string && data.transcriptSummary.size() <= 8192));
+    }
+
+    function isValidWorkplaceSkill(data) {
+      return data.keys().hasAll(['userId', 'scenarioId', 'area', 'chosenOptionIndex', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.scenarioId is string && data.scenarioId.size() <= 128 &&
+        data.area is string && data.area.size() <= 64 &&
+        data.chosenOptionIndex is number &&
+        (!('reflection' in data) || (data.reflection is string && data.reflection.size() <= 2048));
+    }
+
+    function isValidMentor(data) {
+      return data.keys().hasAll(['name', 'role', 'category', 'isPublic', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() <= 128 &&
+        data.role is string && data.role.size() <= 128 &&
+        data.category is string && data.category.size() <= 64 &&
+        data.isPublic is bool &&
+        (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+        (!('company' in data) || (data.company is string && data.company.size() <= 128)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 2048));
+    }
+
+    function isValidMentorRequest(data) {
+      return data.keys().hasAll(['studentId', 'mentorId', 'status', 'questionText', 'createdAt', 'updatedAt']) &&
+        data.studentId is string && data.studentId.size() <= 128 &&
+        data.mentorId is string && data.mentorId.size() <= 128 &&
+        data.status in ['pending', 'answered', 'declined'] &&
+        data.questionText is string && data.questionText.size() <= 2048 &&
+        (!('mentorUserId' in data) || (data.mentorUserId is string && data.mentorUserId.size() <= 128)) &&
+        (!('answerText' in data) || (data.answerText is string && data.answerText.size() <= 4096));
+    }
+
+    function isValidConversation(data) {
+      return data.keys().hasAll(['participantIds', 'createdAt', 'updatedAt']) &&
+        data.participantIds is list && data.participantIds.size() <= 10 &&
+        (!('title' in data) || (data.title is string && data.title.size() <= 128)) &&
+        (!('lastMessageSnippet' in data) || (data.lastMessageSnippet is string && data.lastMessageSnippet.size() <= 256));
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['conversationId', 'senderId', 'text', 'createdAt', 'updatedAt']) &&
+        data.conversationId is string && data.conversationId.size() <= 128 &&
+        data.senderId is string && data.senderId.size() <= 128 &&
+        data.text is string && data.text.size() <= 4096;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'title', 'message', 'isRead', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.title is string && data.title.size() <= 128 &&
+        data.message is string && data.message.size() <= 1024 &&
+        data.isRead is bool;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['userId', 'createdAt', 'updatedAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        (!('emailNotifications' in data) || data.emailNotifications is bool) &&
+        (!('weeklyDigest' in data) || data.weeklyDigest is bool) &&
+        (!('theme' in data) || (data.theme is string && data.theme.size() <= 32));
+    }
+
+    // -------------------------------------------------------------
+    // Collection Match Blocks
+    // -------------------------------------------------------------
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) && isSignedIn() && request.auth.uid == userId &&
+        isValidUser(incoming()) && incoming().uid == userId;
+      allow update: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin()) &&
+        isValidUser(incoming()) && incoming().uid == existing().uid && incoming().createdAt == existing().createdAt &&
+        (!incoming().diff(existing()).affectedKeys().hasAny(['role']) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // 2. Profiles Collection
+    match /profiles/{profileId} {
+      allow get: if isValidId(profileId) && (
+        resource.data.isPublic == true ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.isPublic == true) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(profileId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidProfile(incoming());
+      allow update: if isValidId(profileId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidProfile(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(profileId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 3. Goals Collection
+    match /goals/{goalId} {
+      allow get: if isValidId(goalId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(goalId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidGoal(incoming());
+      allow update: if isValidId(goalId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidGoal(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(goalId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 4. Skills Collection
+    match /skills/{skillId} {
+      allow get: if isValidId(skillId) && (
+        resource.data.isPublic == true ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.isPublic == true) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(skillId) && isSignedIn() &&
+        (incoming().userId == request.auth.uid || isAdmin()) &&
+        isValidSkill(incoming());
+      allow update: if isValidId(skillId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin()) &&
+        isValidSkill(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(skillId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 5. Interests Collection
+    match /interests/{interestId} {
+      allow get: if isValidId(interestId) && (
+        resource.data.isPublic == true ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.isPublic == true) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(interestId) && isSignedIn() &&
+        (incoming().userId == request.auth.uid || isAdmin()) &&
+        isValidInterest(incoming());
+      allow update: if isValidId(interestId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin()) &&
+        isValidInterest(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(interestId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 6. Careers Collection
+    match /careers/{careerId} {
+      allow get: if isValidId(careerId) && (resource.data.isPublic == true || isAdmin());
+      allow list: if resource.data.isPublic == true || isAdmin();
+      allow create: if isValidId(careerId) && isAdmin() && isValidCareer(incoming());
+      allow update: if isValidId(careerId) && isAdmin() && isValidCareer(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(careerId) && isAdmin();
+    }
+
+    // 7. CareerExperiments Collection
+    match /careerExperiments/{experimentId} {
+      allow get: if isValidId(experimentId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(experimentId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidCareerExperiment(incoming());
+      allow update: if isValidId(experimentId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidCareerExperiment(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(experimentId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 8. Roadmaps Collection
+    match /roadmaps/{roadmapId} {
+      allow get: if isValidId(roadmapId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(roadmapId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidRoadmap(incoming());
+      allow update: if isValidId(roadmapId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidRoadmap(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(roadmapId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 9. Tasks Collection
+    match /tasks/{taskId} {
+      allow get: if isValidId(taskId) && (
+        resource.data.isPublic == true ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.isPublic == true) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(taskId) && isSignedIn() &&
+        (incoming().userId == request.auth.uid || isAdmin()) &&
+        isValidTask(incoming());
+      allow update: if isValidId(taskId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin()) &&
+        isValidTask(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(taskId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 10. TaskAttempts Collection
+    match /taskAttempts/{attemptId} {
+      allow get: if isValidId(attemptId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(attemptId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidTaskAttempt(incoming());
+      allow update: if isValidId(attemptId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidTaskAttempt(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(attemptId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 11. TaskFeedback Collection
+    match /taskFeedback/{feedbackId} {
+      allow get: if isValidId(feedbackId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(feedbackId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidTaskFeedback(incoming());
+      allow update: if isValidId(feedbackId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidTaskFeedback(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(feedbackId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 12. Projects Collection
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId) && (
+        resource.data.isPublic == true ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.isPublic == true) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(projectId) && isSignedIn() &&
+        (incoming().userId == request.auth.uid || isAdmin()) &&
+        isValidProject(incoming());
+      allow update: if isValidId(projectId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin()) &&
+        isValidProject(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(projectId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // 13. ProjectProgress Collection
+    match /projectProgress/{progressId} {
+      allow get: if isValidId(progressId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(progressId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidProjectProgress(incoming());
+      allow update: if isValidId(progressId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidProjectProgress(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(progressId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 14. CareerEvidence Collection
+    match /careerEvidence/{evidenceId} {
+      allow get: if isValidId(evidenceId) && (
+        resource.data.isPublic == true ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.isPublic == true) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(evidenceId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidCareerEvidence(incoming());
+      allow update: if isValidId(evidenceId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidCareerEvidence(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(evidenceId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 15. Portfolios Collection
+    match /portfolios/{portfolioId} {
+      allow get: if isValidId(portfolioId) && (
+        resource.data.isPublic == true ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.isPublic == true) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(portfolioId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidPortfolio(incoming());
+      allow update: if isValidId(portfolioId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidPortfolio(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(portfolioId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 16. Resumes Collection
+    match /resumes/{resumeId} {
+      allow get: if isValidId(resumeId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(resumeId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidResume(incoming());
+      allow update: if isValidId(resumeId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidResume(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(resumeId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 17. Applications Collection
+    match /applications/{applicationId} {
+      allow get: if isValidId(applicationId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(applicationId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidApplication(incoming());
+      allow update: if isValidId(applicationId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidApplication(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(applicationId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 18. Opportunities Collection
+    match /opportunities/{opportunityId} {
+      allow get: if isValidId(opportunityId) && (resource.data.isPublic == true || isAdmin());
+      allow list: if resource.data.isPublic == true || isAdmin();
+      allow create: if isValidId(opportunityId) && isAdmin() && isValidOpportunity(incoming());
+      allow update: if isValidId(opportunityId) && isAdmin() && isValidOpportunity(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(opportunityId) && isAdmin();
+    }
+
+    // 19. Interviews Collection
+    match /interviews/{interviewId} {
+      allow get: if isValidId(interviewId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(interviewId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidInterview(incoming());
+      allow update: if isValidId(interviewId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidInterview(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(interviewId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 20. WorkplaceSkills Collection
+    match /workplaceSkills/{skillResolutionId} {
+      allow get: if isValidId(skillResolutionId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(skillResolutionId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidWorkplaceSkill(incoming());
+      allow update: if isValidId(skillResolutionId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidWorkplaceSkill(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(skillResolutionId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 21. Mentors Collection
+    match /mentors/{mentorId} {
+      allow get: if isValidId(mentorId) && (
+        resource.data.isPublic == true ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.isPublic == true) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(mentorId) && isSignedIn() &&
+        (incoming().userId == request.auth.uid || isAdmin()) &&
+        isValidMentor(incoming());
+      allow update: if isValidId(mentorId) && isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin()) &&
+        isValidMentor(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(mentorId) && isAdmin();
+    }
+
+    // 22. MentorRequests Collection
+    match /mentorRequests/{requestId} {
+      allow get: if isValidId(requestId) && isSignedIn() && (
+        resource.data.studentId == request.auth.uid ||
+        resource.data.mentorUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.studentId == request.auth.uid ||
+        resource.data.mentorUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(requestId) && isSignedIn() && incoming().studentId == request.auth.uid &&
+        isValidMentorRequest(incoming());
+      allow update: if isValidId(requestId) && isSignedIn() && (
+        resource.data.studentId == request.auth.uid ||
+        resource.data.mentorUserId == request.auth.uid ||
+        isAdmin()
+      ) && isValidMentorRequest(incoming()) &&
+        incoming().studentId == existing().studentId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(requestId) && isSignedIn() && (resource.data.studentId == request.auth.uid || isAdmin());
+    }
+
+    // 23. Conversations Collection
+    match /conversations/{conversationId} {
+      allow get: if isValidId(conversationId) && isSignedIn() && (
+        request.auth.uid in resource.data.participantIds ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        request.auth.uid in resource.data.participantIds ||
+        isAdmin()
+      );
+      allow create: if isValidId(conversationId) && isSignedIn() &&
+        (request.auth.uid in incoming().participantIds) &&
+        isValidConversation(incoming());
+      allow update: if isValidId(conversationId) && isSignedIn() && (
+        request.auth.uid in resource.data.participantIds ||
+        isAdmin()
+      ) && isValidConversation(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isAdmin();
+
+      // 24. Messages Subcollection
+      match /messages/{messageId} {
+        allow get, list: if isValidId(messageId) && isSignedIn() && (
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds ||
+          isAdmin()
+        );
+        allow create: if isValidId(messageId) && isSignedIn() &&
+          (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds) &&
+          incoming().senderId == request.auth.uid &&
+          incoming().conversationId == conversationId &&
+          isValidMessage(incoming());
+        allow update: if false; // Messages are immutable
+        allow delete: if isValidId(messageId) && isSignedIn() && (resource.data.senderId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // 25. Notifications Collection
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(notificationId) && isSignedIn() &&
+        (incoming().userId == request.auth.uid || isAdmin()) &&
+        isValidNotification(incoming());
+      allow update: if isValidId(notificationId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidNotification(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(notificationId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 26. Settings Collection
+    match /settings/{settingsId} {
+      allow get: if isValidId(settingsId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(settingsId) && isSignedIn() && incoming().userId == request.auth.uid &&
+        isValidSettings(incoming());
+      allow update: if isValidId(settingsId) && isSignedIn() && resource.data.userId == request.auth.uid &&
+        isValidSettings(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(settingsId) && isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
